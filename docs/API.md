@@ -37,6 +37,7 @@ var s3Client = new Minio.Client({
 | [`listObjectsV2`](#listObjectsV2) | [`copyObject`](#copyObject) | | [`listenBucketNotification`](#listenBucketNotification)|
 | [`listIncompleteUploads`](#listIncompleteUploads) |  [`statObject`](#statObject) |
 |     |  [`removeObject`](#removeObject)    |
+|     |  [`removeObjects`](#removeObjects)    |
 |  | [`removeIncompleteUpload`](#removeIncompleteUpload)  |
   
 
@@ -614,6 +615,76 @@ minioClient.removeObject('mybucket', 'photo.jpg', function(err) {
   }
   console.log('Removed the object')
 })
+```
+
+<a name="removeObjects"></a>
+### removeObjects(bucketName, objectsCh)
+
+Remove all objects in a bucket.
+
+__Parameters__
+
+
+| Param | Type | Description |
+| ---- | ---- | ---- |
+| `bucketName` | _string_ | Name of the bucket. |
+| `objectsCh`  | _Channel_  |  Channel of objects in the bucket.  |
+
+
+__Return Value__
+
+
+| Param | Type | Description |
+| ---- | ---- | ---- |
+| `stream` | _Stream_ | Stream emitting the errors in the object deletion. |
+
+
+__Example__
+
+
+```js
+const Channel = require(`@nodeguy/channel`);
+
+const channel = Channel();
+
+// List all object paths in bucket my-bucketname.
+var objectsStream = s3Client.listObjects('my-bucketname', 'my-prefixname', true)
+
+objectsStream.on('data', function(jsonObj) {
+  send(channel,jsonObj.name);
+})
+
+objectsStream.on('error', function(e) {
+  console.log(e);
+})
+
+objectsStream.on('end', function() {
+
+  close(channel);
+
+  var removeStream = s3Client.removeObjects('my-bucketname',channel)
+
+  removeStream.on('data', function(data) {
+  })
+
+  removeStream.on('error', function(e) {
+	    console.log("Error detected during deletion: ",e);
+  })
+
+  removeStream.on('end', function(){
+      console.log("Deleted the objects successfully.");
+  })
+
+})
+
+const send = async (ch,data) => {
+  await ch.push(data);
+};
+
+const close = async (ch) => {
+  await ch.close();
+};
+
 ```
 
 <a name="removeIncompleteUpload"></a>
